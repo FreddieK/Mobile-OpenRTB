@@ -10,12 +10,11 @@ Before leaving mobile Adtech for the second time, writing down some notes for po
     - [Non-stationary Landscape and Concept Drift](#non-stationary-landscape-and-concept-drift)
   - [Bid Shading](#bid-shading)
     - [Market Price Estimation](#market-price-estimation)
-    - [Reinforcement Learning Type Approaches](#reinforcement-learning-type-approaches)
+    - [Alterntive Approaches to Bid Shading](#alterntive-approaches-to-bid-shading)
   - [Opportunity Cost](#opportunity-cost)
     - [Planning](#planning)
     - [Pacing](#pacing)
   - [General Challenges](#general-challenges)
-    - [Non-Stationary Landscape](#non-stationary-landscape)
     - [Explore-Exploit Tradeoff](#explore-exploit-tradeoff)
     - [Feedback Loops](#feedback-loops)
 
@@ -81,6 +80,8 @@ This formula will show up, using various notation, in most papers covering openR
 (impressionValue - bid) if impression == 1 else 0
 ```
 
+One extension here is to also include an infrastructure cost to making the bid, in order to encourage not bidding if the expected utility is too low (typically due to winrate going towards zero).
+
 ### Market Price Estimation
 A common approach is to model the market price distribution for different inventory segments, either parametrically or non-parametrically. If parametrically, integrating over the PDF give the CDF where we easily can predict the win rate for any bid. If non-parametric, model learns to predict win rate at a discrete number of bid candidates.
 
@@ -90,14 +91,16 @@ There are signals such as `min_bid_to_win` provided by some SSPs, but the signal
 
 Further, there is a more fundamental issue with the utility formula in predicting the market price in that modelling the problem as a sealed first price auction is a very poor match for the reality of the OpenRTB advertising system, meaning that the game theoretically optimal approach for sealed first price auctions have no guarantee of being optimal in the actual game we're playing.
 
-### Reinforcement Learning Type Approaches
+### Alterntive Approaches to Bid Shading
 A very fundamental issue with the openRTB landscape is that though for convenience it's often modelled as a sealed first or second price auction, in reality it is much more complex and is more akin to a hybrid between a Dutsch falling price auction and a sealed auction.
 
 The **Waterfall Setup** of publishers lead to multi-round auctions with soft floor prices, where if we don't participate in one round we might still receive an opportunity to bid on the inventory again with a lower floor price. At each round though, we don't know what the true reserve price might be, nor how this bid request relates to previous or later bid requests. 
 
-Offline, we might tie bid requests together based on SSP-Publisher-UserID to analyse this, but doing it in real-time is not feasible due to the extreme volumes of traffic.
+This also makes it important for the bid shading mechanism to be able to lead to not bidding, and not only bid shade in the range ```floor price <= bid <= impressionValue```.
 
 **Header Bidding** allow publishers to work with multiple SSPs in parallel, meaning the DSP might receive two or more bid requests in parallel for the same impression opportunity, meaning that besides bidding against competitors, we might be bidding against ourselves.
+
+Due to these aspects, and the censored learning making market price prediction hard, many alternative approaches to bid shading exists, including survival modelling, hill climbing (assuming a convex but non-differentiable landscape) and reinforcement learning (either while still modelling the impression value, or using end-to-end reinforcement learning).
 
 ## Opportunity Cost
 Since we're having a limited ad budget distributed over a high number of fungible items in repeated auctions, besides 
@@ -119,8 +122,6 @@ Standard way to pace our spending is to relatively shrink the impression value i
 With minROAS coming from the control plant for how our actual spending is comparing to the plan.
 
 ## General Challenges
-
-### Non-Stationary Landscape
 
 ### Explore-Exploit Tradeoff
 
