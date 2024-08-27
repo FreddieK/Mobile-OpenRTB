@@ -15,7 +15,8 @@ Before leaving mobile Adtech for the second time, writing down some notes for po
   - [Additional Challenges](#additional-challenges)
     - [Explore-Exploit Tradeoff](#explore-exploit-tradeoff)
     - [Feedback Loops](#feedback-loops)
-    - [Margin](#margin)
+    - [Handling Margin](#handling-margin)
+    - [Experimentation and Evaluation](#experimentation-and-evaluation)
 
 ## Fundamentals
 [Rådström (2018)](https://lup.lub.lu.se/luur/download?func=downloadFile&recordOId=8953440&fileOId=8953444) provides an impressive overview in his master's thesis, covering the main high-level challenges; 
@@ -150,5 +151,19 @@ If performance guarantees are important, it might be a one-sided controller that
 ### Explore-Exploit Tradeoff
 
 ### Feedback Loops
+* Winner's curse / loser's curse
+* Bid amount as instrumental variable to de-bias predictions
 
-### Margin
+### Handling Margin
+* Reduce bids compared to impressionvalue by the margin we want to keep
+* If over-achieving performance targets; dynamically increase margins to boost profits and incentivise further spend
+
+### Experimentation and Evaluation
+* SUTVA violation
+  * Market place experimentation
+* Higher order impact
+  * Change have first order impact, the different data generation process will then affect models as they retrain, until a new equilibrium is reached
+* Switchback experimentation
+* Intra-day split vs. next-day eval
+* Aggregate impact across customers
+* Spend vs. performance
