@@ -1,9 +1,7 @@
 # Mobile OpenRTB
 Before leaving mobile Adtech for the second time, writing down some notes for possible future reference.
 
-## Table of Content
 - [Mobile OpenRTB](#mobile-openrtb)
-  - [Table of Content](#table-of-content)
   - [Fundamentals](#fundamentals)
   - [Impression Value](#impression-value)
     - [Imbalanced Learning](#imbalanced-learning)
@@ -12,11 +10,12 @@ Before leaving mobile Adtech for the second time, writing down some notes for po
     - [Market Price Estimation](#market-price-estimation)
     - [Alterntive Approaches to Bid Shading](#alterntive-approaches-to-bid-shading)
   - [Opportunity Cost](#opportunity-cost)
-    - [Planning](#planning)
+    - [Temporal Budget Planning](#temporal-budget-planning)
     - [Pacing](#pacing)
-  - [General Challenges](#general-challenges)
+  - [Additional Challenges](#additional-challenges)
     - [Explore-Exploit Tradeoff](#explore-exploit-tradeoff)
     - [Feedback Loops](#feedback-loops)
+    - [Margin](#margin)
 
 ## Fundamentals
 [Rådström (2018)](https://lup.lub.lu.se/luur/download?func=downloadFile&recordOId=8953440&fileOId=8953444) provides an impressive overview in his master's thesis, covering the main high-level challenges; 
@@ -82,6 +81,8 @@ This formula will show up, using various notation, in most papers covering openR
 
 One extension here is to also include an infrastructure cost to making the bid, in order to encourage not bidding if the expected utility is too low (typically due to winrate going towards zero).
 
+Similar to the impression value, concept drift is also a problem when it comes to bid shading.
+
 ### Market Price Estimation
 A common approach is to model the market price distribution for different inventory segments, either parametrically or non-parametrically. If parametrically, integrating over the PDF give the CDF where we easily can predict the win rate for any bid. If non-parametric, model learns to predict win rate at a discrete number of bid candidates.
 
@@ -103,26 +104,51 @@ This also makes it important for the bid shading mechanism to be able to lead to
 Due to these aspects, and the censored learning making market price prediction hard, many alternative approaches to bid shading exists, including survival modelling, hill climbing (assuming a convex but non-differentiable landscape) and reinforcement learning (either while still modelling the impression value, or using end-to-end reinforcement learning).
 
 ## Opportunity Cost
-Since we're having a limited ad budget distributed over a high number of fungible items in repeated auctions, besides 
+Since we're having a limited ad budget distributed over a high number of fungible items in repeated auctions, we can't treat each auction in isolation but must also factor in possible opportunity cost on spending budget now vs. saving it for later.
 
-[...]
+This is typically done via a control signal from a plant that relatively shrinks the impression value. When we are pacing faster than desired, we impose a higher required minimum return on ad spend (ROAS).
 
-### Planning
-[...]
-* Three aspects
-  * Inventory availability
-  * value of inventory to our advertisers
-  * market price of inventory
+```
+impressionValue = impressionValue/minROAS
+```
+
+This will lead to us participating in fewer auctions due to the impression value ending up lower than the floor price, as well as incentivise lower bids in the utility formula.
+
+### Temporal Budget Planning
+We can't know for sure what the future look like, but typically we have some constraints with a budget needing to be spent within some timeframe, and likely with some degree of even distribution (~spend per day).
+
+Within these constraints, we want to device a plan for how the budget should be spent, based on what we believe will generate the best returns.
+
+Typically in papers, this is formulated as a mathematical optimization problem, and then reformulated as a Lagrangian function that you try to solve.
+
+Besides using these aspects to break down spend in time, the same type of planning algorithm can also be extended to subdivide the spend across different campaigns etc, if the more tactical impression value estimate end up not being robust enough in aggregate.
+
+Three important aspects for how to distribute budget in time;
+
+**Inventory availability**
+
+On a 24-hour daily cycle, we have very typical patterns with low traffic during the night, gradually rising during morning and a first peak at lunch, after which a slowdown until late afternoon when it starts rising again until the evening daily peak.
+
+Similarly, Sundays are typically the day of the week when most traffic is observed. In conjunction to this, there can be seasonal effects, as well as specific holidays or events impacting traffic patterns.
+
+**Value of inventory to our advertisers**
+
+Certain types of advertiser verticals see very different response patterns at different times of day (noone orders food in the middle of the night), which influences when it makes sense to spend budget.
+
+**Market price of inventory**
+Finally, besides the availability of inventory and its value to the advertisers, the market price of the inventory will similarly impact when it makes sense to spend budget.
 
 ### Pacing
-Standard way to pace our spending is to relatively shrink the impression value if we have opportunity cost by imposing a dynamic minimum ROAS that increases when we need to halt spending.
+Based on the formulated spend plan, and keeping track of how we are tracking compared to the plan, we can dynamically update the plan going forward to catch up if we have underspent, or slow down if we have overspent.
 
-```adjustedImpressionValue = impressionValue/minROAS```
+For pacing then, we typically would use a PID controller (Start with I-term, consider whether the others help) that is fast to react and adjust the minROAS required.
 
-With minROAS coming from the control plant for how our actual spending is comparing to the plan.
+If performance guarantees are important, it might be a one-sided controller that only can slow down spend (by enforcing higher expected ROAS), alternatively it can be a two-sided controller that also can adjust bidding upwards to ensure the budget is spent according to plan.
 
-## General Challenges
+## Additional Challenges
 
 ### Explore-Exploit Tradeoff
 
 ### Feedback Loops
+
+### Margin
