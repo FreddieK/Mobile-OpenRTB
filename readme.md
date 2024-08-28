@@ -1,5 +1,5 @@
 # Mobile OpenRTB
-Before leaving mobile Adtech for the second time, writing down some notes for possible future reference.
+Before leaving mobile Adtech for the second time, writing down some notes for possible future reference. A lot here is a brain dump 
 
 - [Mobile OpenRTB](#mobile-openrtb)
   - [Fundamentals](#fundamentals)
@@ -12,14 +12,16 @@ Before leaving mobile Adtech for the second time, writing down some notes for po
   - [Opportunity Cost](#opportunity-cost)
     - [Temporal Budget Planning](#temporal-budget-planning)
     - [Pacing](#pacing)
-  - [Additional Challenges](#additional-challenges)
+  - [Additional Aspects to Consider](#additional-aspects-to-consider)
     - [Feedback Loops and Explore-Exploit Tradeoff](#feedback-loops-and-explore-exploit-tradeoff)
-    - [Experimentation and Evaluation](#experimentation-and-evaluation)
+    - [Experimentation](#experimentation)
       - [Budget Splitting and the SUTVA](#budget-splitting-and-the-sutva)
       - [Higher Order Impact](#higher-order-impact)
       - [Switchback Experiments](#switchback-experiments)
-      - [Model and System Evaluations](#model-and-system-evaluations)
-    - [Handling Margin](#handling-margin)
+    - [Evaluation](#evaluation)
+      - [System Evaluations](#system-evaluations)
+      - [Model Evaluations](#model-evaluations)
+    - [Margin Handling](#margin-handling)
 
 ## Fundamentals
 [Rådström (2018)](https://lup.lub.lu.se/luur/download?func=downloadFile&recordOId=8953440&fileOId=8953444) provides an impressive overview in his master's thesis, covering the main high-level challenges; 
@@ -151,7 +153,7 @@ If performance guarantees are important, it might be a one-sided controller that
 
 [Karlsson (2020)](http://wnzhang.net/share/rtb-papers/fc-bidding.pdf) provides a great example, though there are many similar but less sophisticated examples available in literature too.
 
-## Additional Challenges
+## Additional Aspects to Consider
 
 
 ### Feedback Loops and Explore-Exploit Tradeoff
@@ -163,7 +165,7 @@ For an inventory segment as represented by a feature vector, there is also the q
 
 If we're bidding too low, maybe we only win the worst impressions in the segment, assuming that competitors sit on information we lack and bid higher on the more desireable impressions within the segment. Similarly if we bid very high, we likely often will end up overpaying compared to the inventory's true value.
 
-### Experimentation and Evaluation
+### Experimentation
 When trying to improve performance of a bidding algorithm, in the end experimentation is needed as the many interacting parts form a complex system, that further interacts with an external adversarial world that is more complex than what simulations can handle.
 
 There are some big challenges to what can be easily learnt through experiments as well. 
@@ -187,11 +189,32 @@ One way to address some of these issues, but at the cost of having a full A/B te
 
 If more self-contained randomization units can be found, say for example data centre, where they are believed to have very limited interactions, experiments can be repeated on this level to observe the impact of alternating betweeen different versions of the system.
 
-#### Model and System Evaluations
-* Intra-day split vs. next-day eval
-* Aggregate impact across customers
-* Spend vs. performance
+### Evaluation
+Strongly related to experiments, and development of new machine learning models, is of course the evaluation. This is similarly an onion where you just can keep peeling of additional layers and discover yet more complexity and nuance.
 
-### Handling Margin
-* Reduce bids compared to impressionvalue by the margin we want to keep
-* If over-achieving performance targets; dynamically increase margins to boost profits and incentivise further spend
+#### System Evaluations
+Besides the issues with generating data to evaluate, it is also not obvious what is the best way to compare different versions of the systems.
+
+In part, this has to do with evaluating the impact across a wide set of customers, with different performance goals and also different levels of spend.
+
+Some customers have very common conversion events that are easily measured, but others might track purchases that are rare, but where each event holds a much higher value.
+
+Assigning a value to each conversion event and assessing the aggregate impact from changes is non-trivial. Add to that for customers where a one-sided pacing controller is used, the risk of ending up with varying levels of spend. If one variant performs 10% better but spends 5% less - how certain are we that the relative improvement would remain assuming equal spend?
+
+#### Model Evaluations
+As for machine learning model evaluations, we face similar issues. First of all in the offline evaluation, should the models be evaluated similar to time series models with next-day eval, or by splitting the data within the entire training period?
+
+Offline evaluation of predictions into the future is important for robustness to changes, but might also cause more randomness due to changes. Further, even if predicting well into the future for data generated with the current data generation process, how well does this predict how well the model will work when it actually affects the data generation process?
+
+In addition, how well do typical prediction quality metrics correlate with business outcomes? Even calibration across prediction ranges is very important since we use the probability score, but average precision is not impacted by calibration, and logloss suffer from the issue of penalizing more certain predictions more strongly, which is undesirable.
+
+### Margin Handling
+So far in the algorithm, we have only talked about the value to the advertiser, and the supply cost. In reality though, we're typically balancing a third concern as well, and that is the margin that we as a platform take from the advertisers budget.
+
+If we want to charge a 15% margin, the actual supply cost we are willing to pay is reduced to ```impressionValue*0.85```, which will constrain our bid selection
+
+Most simply, we can just charge a static margin in order to not have to deal with this complexity further, however that often means leaving money on the table if we are overachieving the performance targets.
+
+Thus, preferably is to add a controller that gradually increases the margin if we're safely hitting performance targets. Besides the direct benefit for the platform of increasing profits, it also incentivises the advertiser to increase budgets, as we can take on more budgets with similar performancce KPIs by gradually reducing the margins.
+
+If on the other hand we use a fixed margin, the advertiser is more likely to experience a much more sharp performance drop when increasing budgets, as it gets harder and harder for us to keep finding high quality inventory to generate the same conversion rates as before.
