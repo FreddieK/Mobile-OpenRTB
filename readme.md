@@ -13,10 +13,13 @@ Before leaving mobile Adtech for the second time, writing down some notes for po
     - [Temporal Budget Planning](#temporal-budget-planning)
     - [Pacing](#pacing)
   - [Additional Challenges](#additional-challenges)
-    - [Explore-Exploit Tradeoff](#explore-exploit-tradeoff)
-    - [Feedback Loops](#feedback-loops)
-    - [Handling Margin](#handling-margin)
+    - [Feedback Loops and Explore-Exploit Tradeoff](#feedback-loops-and-explore-exploit-tradeoff)
     - [Experimentation and Evaluation](#experimentation-and-evaluation)
+      - [Budget Splitting and the SUTVA](#budget-splitting-and-the-sutva)
+      - [Higher Order Impact](#higher-order-impact)
+      - [Switchback Experiments](#switchback-experiments)
+      - [Model and System Evaluations](#model-and-system-evaluations)
+    - [Handling Margin](#handling-margin)
 
 ## Fundamentals
 [Rådström (2018)](https://lup.lub.lu.se/luur/download?func=downloadFile&recordOId=8953440&fileOId=8953444) provides an impressive overview in his master's thesis, covering the main high-level challenges; 
@@ -146,24 +149,49 @@ For pacing then, we typically would use a PID controller (Start with I-term, con
 
 If performance guarantees are important, it might be a one-sided controller that only can slow down spend (by enforcing higher expected ROAS), alternatively it can be a two-sided controller that also can adjust bidding upwards to ensure the budget is spent according to plan.
 
+[Karlsson (2020)](http://wnzhang.net/share/rtb-papers/fc-bidding.pdf) provides a great example, though there are many similar but less sophisticated examples available in literature too.
+
 ## Additional Challenges
 
-### Explore-Exploit Tradeoff
 
-### Feedback Loops
-* Winner's curse / loser's curse
-* Bid amount as instrumental variable to de-bias predictions
+### Feedback Loops and Explore-Exploit Tradeoff
+Given that the data generation process is based on us bidding and winning impressions, our decision making process will influence the future training data.
+
+Some ways of deal with the impact of this include looking at propensity score and trying to debias training, as well as introducing exploration in the bidding process.
+
+For an inventory segment as represented by a feature vector, there is also the question about winner's curse / loser's curse, related to how aggressively we have bid on the segment in the past.
+
+If we're bidding too low, maybe we only win the worst impressions in the segment, assuming that competitors sit on information we lack and bid higher on the more desireable impressions within the segment. Similarly if we bid very high, we likely often will end up overpaying compared to the inventory's true value.
+
+### Experimentation and Evaluation
+When trying to improve performance of a bidding algorithm, in the end experimentation is needed as the many interacting parts form a complex system, that further interacts with an external adversarial world that is more complex than what simulations can handle.
+
+There are some big challenges to what can be easily learnt through experiments as well. 
+
+#### Budget Splitting and the SUTVA
+In part, this is due to a violation of the SUTVA (Stable Unit Treatment Value Assumption). If we naively setup an experiment with a test and control group split by user id, we face the challenge that if one of the groups spend faster than the other, it will impact the budget pacing and thus the bidding of the other group too.
+
+If the experiment is for a single budget, then this is relatively easily adressed by just splitting the budget in half. If it's a global experiment for all active campaigns though, this will require the system to split every budget in the system.
+
+This might still be feasible if we only run one experiment at the time, but if we further want to run multiple overlapping experiments, then the complexity of splitting budgets grows exponentially. 
+
+Additionally, the SSPs have no concept of our experiments, and their traffic shaping and yield optimization algorithms will adjust globally based on our aggregate behavior across experiment groups.
+
+#### Higher Order Impact
+Given that a change in the algorithm affects the data generation process for the training data for all the models in the future, the results from an experiment will not always accurately reflect what the impact will be if the new version is scaled up to 100% of the traffic, and what happens when all the various models get retrained based on the updated data generation process.
+
+It is common to see a change break a previous equilibrium, and then gradually force bidding into more unexplored territories, until the models have a chance to learn from their mistakes in the new environment, and then gradually reach a new equilibrium.
+
+#### Switchback Experiments
+One way to address some of these issues, but at the cost of having a full A/B test, is to utilize what is callled switchback experiments, where rather than utilizing a % of traffic for an experiment, the experiment utilizes 100% of the traffic for a limited duration of time.
+
+If more self-contained randomization units can be found, say for example data centre, where they are believed to have very limited interactions, experiments can be repeated on this level to observe the impact of alternating betweeen different versions of the system.
+
+#### Model and System Evaluations
+* Intra-day split vs. next-day eval
+* Aggregate impact across customers
+* Spend vs. performance
 
 ### Handling Margin
 * Reduce bids compared to impressionvalue by the margin we want to keep
 * If over-achieving performance targets; dynamically increase margins to boost profits and incentivise further spend
-
-### Experimentation and Evaluation
-* SUTVA violation
-  * Market place experimentation
-* Higher order impact
-  * Change have first order impact, the different data generation process will then affect models as they retrain, until a new equilibrium is reached
-* Switchback experimentation
-* Intra-day split vs. next-day eval
-* Aggregate impact across customers
-* Spend vs. performance
