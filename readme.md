@@ -8,7 +8,7 @@ Before leaving mobile Adtech for the second time, writing down some notes for po
     - [Non-stationary Landscape and Concept Drift](#non-stationary-landscape-and-concept-drift)
   - [Bid Shading](#bid-shading)
     - [Market Price Estimation](#market-price-estimation)
-    - [Alterntive Approaches to Bid Shading](#alterntive-approaches-to-bid-shading)
+    - [Alternative Approaches to Bid Shading](#alternative-approaches-to-bid-shading)
   - [Opportunity Cost](#opportunity-cost)
     - [Temporal Budget Planning](#temporal-budget-planning)
     - [Pacing](#pacing)
@@ -98,7 +98,7 @@ There are signals such as `min_bid_to_win` provided by some SSPs, but the signal
 
 Further, there is a more fundamental issue with the utility formula in predicting the market price in that modelling the problem as a sealed first price auction is a very poor match for the reality of the OpenRTB advertising system, meaning that the game theoretically optimal approach for sealed first price auctions have no guarantee of being optimal in the actual game we're playing.
 
-### Alterntive Approaches to Bid Shading
+### Alternative Approaches to Bid Shading
 A very fundamental issue with the openRTB landscape is that though for convenience it's often modelled as a sealed first or second price auction, in reality it is much more complex and is more akin to a hybrid between a Dutsch falling price auction and a sealed auction.
 
 The **Waterfall Setup** of publishers lead to multi-round auctions with soft floor prices, where if we don't participate in one round we might still receive an opportunity to bid on the inventory again with a lower floor price. At each round though, we don't know what the true reserve price might be, nor how this bid request relates to previous or later bid requests. 
